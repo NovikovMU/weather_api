@@ -1,0 +1,3 @@
+foo.*
+.env
+node_modules/
