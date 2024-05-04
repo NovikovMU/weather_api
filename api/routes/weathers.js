@@ -3,40 +3,40 @@ const router = express.Router();
 
 require('dotenv').config();
 
+
 function fetchData(lat, lon) {
     const apiName = 'locationforecast'
     const url =
         'https://api.met.no/weatherapi/' + apiName +
         '/2.0/compact?lat=' + lat +
         '&lon=' + lon + '&altitude=0';
-    console.error(url)
     return fetch(url)
     .then(response => {
         if (!response.ok) {
             throw {
                 error: new Error(`Error while fetch from ${apiName}`),
-                foo: response.status,
-                mes: response.statusText,
+                status: response.status,
+                message: response.statusText,
             }
         }
         return response.json();
     })
 }
 
-function fetchLatLon(url) {
-    return fetch(url)
-    .then(response => {
-        if (!response.ok) {
-            const apiName = url.split('/')[0];
-            throw {
-                error: new Error(`Error while fetch from ${apiName}`),
-                foo: response.status,
-                mes: response.statusText,
-            }
-        }
-        return response.json();
-    })
-}
+// function fetchLatLon(url) {
+//     return fetch(url)
+//     .then(response => {
+//         if (!response.ok) {
+//             const apiName = url.split('/')[0];
+//             throw {
+//                 error: new Error(`Error while fetch from ${apiName}`),
+//                 status: response.status,
+//                 message: response.statusText,
+//             }
+//         }
+//         return response.json();
+//     })
+// }
 
 
 function fetchCityData(lat, lon) {
@@ -53,11 +53,14 @@ function fetchCityData(lat, lon) {
         if (!response.ok) {
             throw {
                 error: new Error(`Error while fetch from ${apiName}`),
-                foo: response.status,
-                mes: response.statusText,
+                status: response.status,
+                message: response.statusText,
             }
         }
         return response.json();
+    })
+    .catch(error => {
+        return {}
     })
 }
 
@@ -70,10 +73,9 @@ router.get('/get_weather/', (req, res, next) => {
     
     .catch(error => {
         // Обработка ошибки
-        // console.log(error.statuscode)
         res.status(404).json({
-            'Errors': `${error.foo}`,
-            'Errorsm': `${error.mes}`,
+            'Errors': `${error.status}`,
+            'Errorsm': `${error.message}`,
             'Err': `${error.error.message}`,
         });
     });
@@ -85,11 +87,13 @@ router.get('/get_weather/', (req, res, next) => {
 
 
 router.get('/', (req, res, next) => {
-    let offset
-    let city
-    let country
-    const lat = req.query.lat
-    const lon = req.query.lon
+    let offset = null
+    let city = null
+    let country = null
+
+    const lat = req.query.lat;
+    const lon = req.query.lon;
+    const demand_hour = req.query.demand_hour || 12;
     if (!lat || !lon) {
         return res.status(400).json({
             'Error': 'отсутсвует значение широты или долготы.'
@@ -120,27 +124,66 @@ router.get('/', (req, res, next) => {
         })
     }
 
-    fetchCityData(lat, lon)
-    .then(data => {
-        city = data.city
-        country = data.countryName
-        offset = data.utcOffset
+    Promise.all([fetchData(lat, lon), fetchCityData(5000, lon)])
+    .then(([data1, data2]) => {
+        let units = data1.properties.meta.units
+        console.error(units)
+        const timeseries_array = data1.properties.timeseries
+        if (Object.keys(data2).length !== 0) {
+            city = data2.city
+            country = data2.countryName
+            offset = data2.timeZone.utcOffset
+        }
+        var result_array = []
+        for (let element of timeseries_array) {
+            let element_time = element.time.slice(0, -1)
+            let date_time = element_time.split('T')
+            let date = date_time[0]
+            let time_array = date_time[1].split(':')
+            if (offset) {
+                time_array[0] = (
+                    24 + Number(time_array[0]) + Number(offset)
+                ) % 24
+            }
+            if (demand_hour == Number(time_array[0])) {
+                result_array.push({
+                    'date': date,
+                    'time': time_array.join(':'),
+                    'temerature':
+                        element.data.instant.details.air_temperature +
+                        ' ' +
+                        units.air_temperature,
+                    'wind speed': 
+                        element.data.instant.details.wind_speed +
+                        ' ' +
+                        units.wind_speed,
+                    // 'next hour' :
+                    //     element.data.next_1_hours.summary.symbol_code,
+                    // 'next 6 hours' :
+                    //     element.data.next_6_hours.summary.symbol_code,
+                    // 'next 12 hours' :
+                    //     element.data.next_12_hours.summary.symbol_code
+                })
+            }
+        }
+        res.status(200).json(result_array)
+
         
     })
     .catch(error => {
-        res.status(error.foo).json({
-            'error': `${error.error.message}`,
-            'error message': `${error.mes}`
-        })
+        if (error.error) {
+            res.status(error.status).json({
+                'error': `${error.error.message}`,
+                'error message': `${error.message}`,
+            })
+        }
+        else {
+            res.status(400).json({
+                'error name': `${error.name}`,
+                'error message': `${error.message}`,
+            })
+        }
     })
-    res.status(200).json({'data': 'asdads'})
-    // fetchData(lat, lon)
-    // .then(data => {
-    //     res.status(200).json({
-    //         'data': data
-    //     })
-    // })
-
 })
 
 module.exports = router;
