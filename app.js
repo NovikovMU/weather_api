@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const morgan = require('morgan')
+const rateLimit = require('express-rate-limit');
 
 const weatherRouter = require('./api/routes/weathers');
 
@@ -18,6 +19,13 @@ app.use((req, res, next) => {
     }
     next()
 })
+
+const limit = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 100 // 100 requests/hour
+});
+
+app.use('/api/v1', limit);
 
 app.use('/api/v1', weatherRouter);
 
