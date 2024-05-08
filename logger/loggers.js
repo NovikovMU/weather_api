@@ -16,7 +16,7 @@ const logger = createLogger({
     transports : [
         new transports.File({
             filename: './logger/logfile.log',
-            maxsize: 1000,
+            maxsize: 5000,
             maxFiles: 10,
             tailable: true
         })

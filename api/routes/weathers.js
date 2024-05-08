@@ -1,219 +1,109 @@
 const express = require('express');
 const router = express.Router();
-const logger = require('../../logger/loggers');
-const { error } = require('winston');
-require('dotenv').config();
+const { fetchLatLonData, maintainData } = require('../../logic/weather')
+/**
+* @swagger
+* tags:
+*   name: Weather
+*   description: The weather API
+*/
 
+/**
+ * @swagger
+ * /api/v1/coordinates/:
+ *   get:
+ *     summary: Получение погоды
+ *     description: Получение погоды по широте и долготе.
+ *     tags: [Weather]
+ *     parameters:
+ *       - in: query
+ *         name: lon
+ *         schema:
+ *           type: number
+ *           format: float 
+ *           minimum: -180
+ *           maximum: 180
+ *         required: true
+ *         description: Значение широты
+ *       - in: query
+ *         name: lat
+ *         schema:
+ *           type: number
+ *           format: float 
+ *           minimum: -90
+ *           maximum: 90
+ *         required: true
+ *         description: Значение долготы
+ *       - in: query
+ *         name: demand_hour
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *           maximum: 23
+ *         required: false
+ *         description: На какое время нужна погода. Необязательный параметр, 
+ *           дефолтное значение = 12 часов.
+ *     responses:
+ *       200:
+ *         description: Запрос для широты 50 и долготы 51, когда сторонний
+ *             api не работает
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 city:
+ *                   type: string
+ *                   nullable: true
+ *                   example: null
+ *                 country:
+ *                   type: string
+ *                   nullable: true
+ *                   example: null
+ *                 point_name:
+ *                   type: string
+ *                   nullable: true
+ *                   example: null
+ *                 is_utc_time:
+ *                   type: boolean
+ *                   example: true
+ *                 lat:
+ *                   type: number
+ *                   example: 50
+ *                 lon:
+ *                   type: number
+ *                   nullable: true
+ *                   example: 51
+ *                 data:
+ *                   type: array
+ *                   example: [object]
+ *       400:
+ *         description: Некорректный запрос
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error message"
+ *       404:
+ *         description: Ресурс не найден
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Resource not found"
+*/
 
-function fetchWeatherData(lat, lon) {
-    const apiName = 'locationforecast'
-    const url =
-        'https://api.met.no/weatherapi/' +
-        apiName +
-        '/2.0/compact?lat=' +
-        lat +
-        '&lon=' +
-        lon +
-        '&altitude=0';
-    return fetch(url)
-    .then(response => {
-        if (!response.ok) {
-            logger.error({
-                'status': response.status,
-                'text': response.statusText,
-                'site': apiName
-            })
-            throw {
-                message: response.statusText,
-                status: response.status
-            }
-        }
-        return response.json();
-    })
-}
-
-function fetchCityData(lat, lon) {
-    const BIG_DATA_API = process.env.BIG_DATA_API;
-    const apiName = 'api-bdc.net';
-    const url = 
-    'https://' +
-    apiName +
-    '/data/reverse-geocode-with-timezone?latitude=' +
-    lat +
-    '&longitude=' +
-    lon +
-    '&localityLanguage=ru&key=' +
-    // BIG_DATA_API;
-    ''
-    console.error(url)
-    return fetch(url)
-    .then(response => {
-        if (!response.ok) {
-            logger.error({
-                'status': response.status,
-                'text': response.statusText,
-                'site': apiName
-            })
-            return {}
-        }
-        return response.json();
-    })
-}
-
-function fetchLatLonData(country, city) {
-    const apiName = 'openstreetmap.org'
-    if (country) {
-        country = 'country=' + country
-    } else {country = ''}
-    if (city) {
-        city = '&city=' + city
-    } else {city = ''}
-    const url = 
-    'https://nominatim.' +
-    apiName +
-    '/search?' +
-    country +
-    city +
-        '&format=json';
-    return fetch(url)
-    .then(response => {
-        if (!response.ok) {
-            logger.error({
-                'status': response.status,
-                'text': response.statusText,
-                'site': apiName
-            })
-            throw {
-                message: response.statusText,
-                status: response.status
-            }
-        }
-        return response.json();
-    })
-}
-
-function maintainData(lat, lon, demand_hour, city = null, point_name = null) {
-    if (!lat || !lon) {
-        throw Error('Отсутсвует значение широты или долготы.')
-    }
-
-    if (24 < demand_hour || demand_hour < 0) {
-        throw new Error('Время должно быть в диапазоне [0: 24)')
-    }
-
-    if (!Number.isInteger(Number(demand_hour))) {
-        throw new Error('Время должно быть целочисленным')
-    }
-
-    if (/[a-zA-Z]/g.test(lon)) {
-        throw new Error('Значениче долготы должно быть числом')
-    }
-
-    if (/[a-zA-Z]/g.test(lat)) {
-        throw new Error('Значениче широты должно быть числом')
-    }
-
-    if (-90 > lat || lat > 90) {
-        throw new Error('Широта должна быть в диапазоне [-90:90]')
-    }
-
-    if (-180 > lon || lon > 180) {
-        throw new Error('Долгота должна быть в диапазоне [-180:180]')
-    }
-
-    let offset = null
-    let country = null
-    let is_utc_time = true
-    return Promise.all(
-        [fetchWeatherData(lat, lon), fetchCityData(lat, lon)]
-    )
-    .then(([data1, data2]) => {
-        let units = data1.properties.meta.units
-        const timeseries_array = data1.properties.timeseries
-        if (Object.keys(data2).length !== 0) {
-            is_utc_time = false
-            if (data2.city == '') {
-                if (!point_name) {
-                    point_name = data2.localityInfo.informative[0].name
-                }
-            } else {
-                country = data2.countryName
-                if (!city) {
-                    city = data2.city
-                }
-                if (!point_name) {
-                    point_name = city
-                }
-                offset = data2.timeZone.utcOffset
-            }
-        }
-        let result_array = []
-        for (let element of timeseries_array) {
-            let element_time = element.time.slice(0, -1)
-            let date_time = element_time.split('T')
-            let date = date_time[0]
-            let time_array = date_time[1].split(':')
-            if (offset) {
-                time_array[0] = (
-                    24 + Number(time_array[0]) + Number(offset)
-                ) % 24
-            }
-            if (demand_hour != Number(time_array[0])) {continue}
-            let result_dict = {
-                'date': date,
-                'time': time_array.join(':'),
-                'temerature':
-                    element.data.instant.details.air_temperature +
-                    ' ' +
-                    units.air_temperature,
-                'wind speed': 
-                    element.data.instant.details.wind_speed +
-                    ' ' +
-                    units.wind_speed,
-            }
-            if (element.data.next_1_hours) {
-                result_dict[
-                    'next hour'
-                ] = element.data.next_1_hours.summary.symbol_code;
-            }
-            if (element.data.next_6_hours) {
-                result_dict[
-                    'next 6 hours'
-                ] = element.data.next_6_hours.summary.symbol_code;
-            }
-            if (element.data.next_12_hours) {
-                result_dict[
-                    'next 12 hours'
-                ] = element.data.next_12_hours.summary.symbol_code;
-            }
-            result_array.push(result_dict)
-        }
-        if (is_utc_time) {
-            return {
-                'is_utc_time': is_utc_time,
-                'lat': lat,
-                'lon': lon,
-                'data': result_array
-            }
-        } else {
-            return {
-                'is_utc_time': is_utc_time,
-                'country': country,
-                'city': city,
-                'point_name': point_name,
-                'lat': lat,
-                'lon': lon,
-                'data': result_array
-            }
-        }
-    })
-}
-
-router.get('/', (req, res, _) => {
+router.get('/coordinates/', (req, res, _) => {
     const lat = req.query.lat;
     const lon = req.query.lon;
     const demand_hour = req.query.demand_hour || 12;
-
+    
     maintainData(lat, lon, demand_hour)
     .then(data => {
         res.status(200).json(data)
@@ -225,38 +115,122 @@ router.get('/', (req, res, _) => {
     })
 })
 
-router.get('/v1/', (req, res, _) => {
+/**
+ * @swagger
+ * /api/v1/locations/:
+ *   get:
+ *     summary: Получение погоды
+ *     description: Получение погоды по широте и долготе.
+ *     tags: [Weather]
+ *     parameters:
+ *       - in: query
+ *         name: city
+ *         schema:
+ *           type: string
+ *           required: true
+ *         description: Город
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Страна
+ *       - in: query
+ *         name: demand_hour
+ *         required: false
+ *         description: На какое время нужна погода. Необязательный параметр, 
+ *              дефолтное значение = 12 часов.
+ *         schema:
+ *           minimum: 0
+ *           maximum: 23
+ *           type: number
+ *     responses:
+ *       200:
+ *         description: Запрос для Города Москва и Страна = Россия
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 city:
+ *                   type: string
+ *                   nullable: true
+ *                   example: Москва
+ *                 country:
+ *                   type: string
+ *                   nullable: true
+ *                   example: Россия
+ *                 point_name:
+ *                   type: string
+ *                   nullable: true
+ *                   example: Москва, Центральный федеральный округ, Россия
+ *                 is_utc_time:
+ *                   type: boolean
+ *                   example: true
+ *                 lat:
+ *                   type: number
+ *                   example: 55.7505412
+ *                 lon:
+ *                   type: number
+ *                   nullable: true
+ *                   example: 37.6174782
+ *                 data:
+ *                   type: array
+ *                   example: [object]
+ *         
+ *       400:
+ *         description: Некорректный запрос
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error message"
+ *       404:
+ *         description: Ресурс не найден
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Resource not found"
+ */
+router.get('/locations/', (req, res, _) => {
     const country = req.query.country;
     const city = req.query.city;
     const demand_hour = req.query.demand_hour || 12;
-    if (!city && !country) {
-        return res.status(404).json({
-            'Error': 'Вы не написали ни город ни страну.'
+    if (!city) {
+        return res.status(400).json({
+            'error': 'Вы не написали город.'
         })
     }
     fetchLatLonData(country, city)
     .then(data => {
         
         let promisesArray = []
-        // place
         for (let element of data) {
             if (element.class != 'place') { continue }
             let lat = element.lat
             let lon = element.lon
             let city_name = element.name
             let display_name = element.display_name
+            let country = element.display_name.split(' ').pop()
             promisesArray.push(maintainData(
-                lat, lon, demand_hour, city_name, display_name
+                lat, lon, demand_hour, country, city_name, display_name
             ))
         }
         if (promisesArray.length === 0) {
             return res.status(404).json({
-                'Error': 'По вашему запросу ничего не найдено'
+                'error': 'По вашему запросу ничего не найдено.'
             })
         }
         Promise.all(promisesArray)
         .then(resultArray => {
-            return res.status(200).json({resultArray})
+            return res.status(200).json(resultArray)
         })
     })
     .catch(error => {
