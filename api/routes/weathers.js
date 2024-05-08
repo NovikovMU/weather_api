@@ -20,7 +20,7 @@ const { fetchLatLonData, maintainData } = require('../../logic/weather')
  *         name: lon
  *         schema:
  *           type: number
- *           format: float 
+ *           format: float
  *           minimum: -180
  *           maximum: 180
  *         required: true
@@ -29,7 +29,7 @@ const { fetchLatLonData, maintainData } = require('../../logic/weather')
  *         name: lat
  *         schema:
  *           type: number
- *           format: float 
+ *           format: float
  *           minimum: -90
  *           maximum: 90
  *         required: true
@@ -41,7 +41,7 @@ const { fetchLatLonData, maintainData } = require('../../logic/weather')
  *           minimum: 0
  *           maximum: 23
  *         required: false
- *         description: На какое время нужна погода. Необязательный параметр, 
+ *         description: На какое время нужна погода. Необязательный параметр,
  *           дефолтное значение = 12 часов.
  *     responses:
  *       200:
@@ -99,20 +99,20 @@ const { fetchLatLonData, maintainData } = require('../../logic/weather')
  *                   example: "Resource not found"
 */
 
-router.get('/coordinates/', (req, res, _) => {
+router.get('/coordinates/', (req, res, next) => {
     const lat = req.query.lat;
     const lon = req.query.lon;
     const demand_hour = req.query.demand_hour || 12;
-    
+
     maintainData(lat, lon, demand_hour)
-    .then(data => {
-        res.status(200).json(data)
-    })
-    .catch(error => {
-        return res.status(error.status).json({
-            'error message': `${error.message}`,
+        .then(data => {
+            res.status(200).json(data)
         })
-    })
+        .catch(error => {
+            return res.status(error.status).json({
+                'error message': `${error.message}`,
+            })
+        })
 })
 
 /**
@@ -138,7 +138,7 @@ router.get('/coordinates/', (req, res, _) => {
  *       - in: query
  *         name: demand_hour
  *         required: false
- *         description: На какое время нужна погода. Необязательный параметр, 
+ *         description: На какое время нужна погода. Необязательный параметр
  *              дефолтное значение = 12 часов.
  *         schema:
  *           minimum: 0
@@ -177,7 +177,7 @@ router.get('/coordinates/', (req, res, _) => {
  *                 data:
  *                   type: array
  *                   example: [object]
- *         
+ *
  *       400:
  *         description: Некорректный запрос
  *         content:
@@ -199,7 +199,7 @@ router.get('/coordinates/', (req, res, _) => {
  *                   type: string
  *                   example: "Resource not found"
  */
-router.get('/locations/', (req, res, _) => {
+router.get('/locations/', (req, res, next) => {
     const country = req.query.country;
     const city = req.query.city;
     const demand_hour = req.query.demand_hour || 12;
@@ -209,34 +209,62 @@ router.get('/locations/', (req, res, _) => {
         })
     }
     fetchLatLonData(country, city)
-    .then(data => {
-        
-        let promisesArray = []
-        for (let element of data) {
-            if (element.class != 'place') { continue }
-            let lat = element.lat
-            let lon = element.lon
-            let city_name = element.name
-            let display_name = element.display_name
-            let country = element.display_name.split(' ').pop()
-            promisesArray.push(maintainData(
-                lat, lon, demand_hour, country, city_name, display_name
-            ))
-        }
-        if (promisesArray.length === 0) {
-            return res.status(404).json({
-                'error': 'По вашему запросу ничего не найдено.'
+        .then(data => {
+            let promisesArray = []
+            for (let element of data) {
+                if (element.class != 'place') { continue }
+                let lat = element.lat
+                let lon = element.lon
+                let city_name = element.name
+                let display_name = element.display_name
+                let country = element.display_name.split(' ').pop()
+                promisesArray.push(maintainData(
+                    lat, lon, demand_hour, country, city_name, display_name
+                ))
+            }
+            if (promisesArray.length === 0) {
+                return res.status(404).json({
+                    'error': 'По вашему запросу ничего не найдено.'
+                })
+            }
+            Promise.all(promisesArray)
+                .then(resultArray => {
+                    return res.status(200).json(resultArray)
+                })
+        })
+        .catch(error => {
+            return res.status(error.status).json({
+                'error message': `${error.message}`,
             })
-        }
-        Promise.all(promisesArray)
-        .then(resultArray => {
-            return res.status(200).json(resultArray)
         })
-    })
-    .catch(error => {
-        return res.status(error.status).json({
-            'error message': `${error.message}`,
-        })
-    })
 })
+
+// const fetch = require('node-fetch');
+// router.get('/', (req, res, next) => {
+//     fetch('https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=50&lon=55&altitude=0',
+//         {
+//             'Content-Type': 'application/json'
+//         }
+//     )
+//         .then(response => {
+//             if (!response.ok) {
+//                 throw {
+//                     message: response.statusText,
+//                     status: response.status
+//                 }
+//             }
+//             return response.json();
+//         })
+//         .then(response => {
+//             console.error(response)
+//             return res.status(200).json({
+//                 'error ': `${response.properties.timeseries}`,
+//             })
+//         })
+//         .catch(error => {
+//             return res.status(error.status).json({
+//                 'error message': `${error.message}`,
+//             })
+//         })
+// })
 module.exports = router;

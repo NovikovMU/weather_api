@@ -20,7 +20,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.lon).to.equal(lon);
                     expect(res.body.data[0].time).to.equal(default_hour);
                     done();
-            });
+                });
         });
     
         it('with demand hour', (done) => {
@@ -46,7 +46,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Отсутсвует значение долготы.');
                     done();
-            });
+                });
         });
 
         it('enter lon with letter', (done) => {
@@ -59,7 +59,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Значениче долготы должно быть числом.');
                     done();
-            });
+                });
         });
 
         it('enter huge lon', (done) => {
@@ -73,7 +73,7 @@ describe('GET weather by lot, lan', () => {
                         .to
                         .equal('Долгота должна быть в диапазоне [-180:180].');
                     done();
-            });
+                });
         });
 
         it('dont enter lat', (done) => {
@@ -85,7 +85,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Отсутсвует значение широты.');
                     done();
-            });
+                });
         });
         it('enter lat with letter', (done) => {
             let lat_with_letter = 't1est';
@@ -97,7 +97,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Значениче широты должно быть числом.');
                     done();
-            });
+                });
         });
 
         it('enter huge lat', (done) => {
@@ -110,7 +110,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Широта должна быть в диапазоне [-90:90].');
                     done();
-            });
+                });
         });
         
         it('enter greater_hour', (done) => {
@@ -123,7 +123,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Время должно быть в диапазоне [0: 24).');
                     done();
-            });
+                });
         });
         it('enter lower_hour', (done) => {
             let lower_hour = -3;
@@ -135,7 +135,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Время должно быть в диапазоне [0: 24).');
                     done();
-            });
+                });
         });
         it('enter float_hour', (done) => {
             let float_hour = 5.5;
@@ -147,7 +147,7 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body.error.message)
                         .to.equal('Время должно быть целочисленным.');
                     done();
-            });
+                });
         });
     });
 });
@@ -181,45 +181,45 @@ describe('GET weather by location', () => {
                     if (err) return done(err);
                     expect(res.body.length).to.not.equal(1);
                     done();
-            });
+                });
         });
     });
     describe('incorrect enter query', () => {
         it('city dont enter', (done) => {
             request
                 .get(`locations/`)
-                    .end((err, res) => {
-                        if (err) return done(err);
-                        expect(res.statusCode).to.be.equal(400);
-                        expect(res.body.error)
-                            .to.equal('Вы не написали город.');
-                        done();
-            });
+                .end((err, res) => {
+                    if (err) return done(err);
+                    expect(res.statusCode).to.be.equal(400);
+                    expect(res.body.error)
+                        .to.equal('Вы не написали город.');
+                    done();
+                });
         });
 
         it('city dont found', (done) => {
             request
                 .get(`locations/?city=asdasdaadfg`)
-                    .end((err, res) => {
-                        if (err) return done(err);
-                        expect(res.statusCode).to.be.equal(404);
-                        expect(res.body.error)
-                            .to.equal('По вашему запросу ничего не найдено.');
-                        done();
-            });
+                .end((err, res) => {
+                    if (err) return done(err);
+                    expect(res.statusCode).to.be.equal(404);
+                    expect(res.body.error)
+                        .to.equal('По вашему запросу ничего не найдено.');
+                    done();
+                });
         });
 
         it('city dont found', (done) => {
             let unexist_city = 'asdsadsadasd'
             request
                 .get(`locations/?city=${unexist_city}`)
-                    .end((err, res) => {
-                        if (err) return done(err);
-                        expect(res.statusCode).to.be.equal(404);
-                        expect(res.body.error)
-                            .to.equal('По вашему запросу ничего не найдено.');
-                        done();
-            });
+                .end((err, res) => {
+                    if (err) return done(err);
+                    expect(res.statusCode).to.be.equal(404);
+                    expect(res.body.error)
+                        .to.equal('По вашему запросу ничего не найдено.');
+                    done();
+                });
         });
     });
 });
