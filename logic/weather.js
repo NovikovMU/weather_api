@@ -1,6 +1,6 @@
 const logger = require('../logger/loggers');
 require('dotenv').config();
-const fetch = require('node-fetch');
+// const fetch = require('node-fetch');
 
 /**
 * @param {string} lat
@@ -17,6 +17,7 @@ function fetchWeatherData(lat, lon) {
         '&lon=' +
         lon +
         '&altitude=0';
+    console.error(url)
     return fetch(url)
         .then(response => {
             if (!response.ok) {
@@ -39,6 +40,7 @@ function fetchWeatherData(lat, lon) {
 * @param {string} lon
 * @returns {Promise<object>}
 */
+
 function fetchCityData(lat, lon) {
     const BIG_DATA_API = process.env.BIG_DATA_API;
     const apiName = 'api-bdc.net';
@@ -51,7 +53,6 @@ function fetchCityData(lat, lon) {
     lon +
     '&localityLanguage=ru&key=' +
     BIG_DATA_API;
-
     return fetch(url)
         .then(response => {
             if (!response.ok) {
@@ -71,6 +72,7 @@ function fetchCityData(lat, lon) {
 * @param {string} city
 * @returns {Promise<object>}
 */
+
 function fetchLatLonData(country, city) {
     const apiName = 'openstreetmap.org'
     if (country) {
@@ -247,4 +249,4 @@ function maintainData(
         })
 }
 
-module.exports = {fetchLatLonData, maintainData}
+module.exports = {fetchLatLonData, maintainData }

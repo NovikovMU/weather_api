@@ -231,6 +231,11 @@ router.get('/locations/', (req, res, next) => {
                 .then(resultArray => {
                     return res.status(200).json(resultArray)
                 })
+                .catch(error => {
+                    return res.status(error.status).json({
+                        'error message': `${error.message}`,
+                    })
+                })
         })
         .catch(error => {
             return res.status(error.status).json({
@@ -239,32 +244,4 @@ router.get('/locations/', (req, res, next) => {
         })
 })
 
-// const fetch = require('node-fetch');
-// router.get('/', (req, res, next) => {
-//     fetch('https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=50&lon=55&altitude=0',
-//         {
-//             'Content-Type': 'application/json'
-//         }
-//     )
-//         .then(response => {
-//             if (!response.ok) {
-//                 throw {
-//                     message: response.statusText,
-//                     status: response.status
-//                 }
-//             }
-//             return response.json();
-//         })
-//         .then(response => {
-//             console.error(response)
-//             return res.status(200).json({
-//                 'error ': `${response.properties.timeseries}`,
-//             })
-//         })
-//         .catch(error => {
-//             return res.status(error.status).json({
-//                 'error message': `${error.message}`,
-//             })
-//         })
-// })
 module.exports = router;
