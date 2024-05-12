@@ -76,6 +76,25 @@ describe('GET weather by lot, lan', () => {
                 });
         });
 
+        it('enter huge amount number after decimal in lon', (done) => {
+            let lon_with_huge_amount_number = 1.12345678901234;
+            request
+                .get(
+                    `coordinates/?&lon=${lon_with_huge_amount_number}` +
+                    `&lat=${lat}`
+                )
+                .end((err, res) => {
+                    if (err) return done(err);
+                    expect(res.statusCode).to.be.equal(400);
+                    expect(res.body.error.message)
+                        .to.equal(
+                            'Введите значение долготы с точностью до 13 ' +
+                            'значений.'
+                        );
+                    done();
+                });
+        });
+
         it('dont enter lat', (done) => {
             request
                 .get(`coordinates/?&lon=${lon}`)
@@ -112,7 +131,26 @@ describe('GET weather by lot, lan', () => {
                     done();
                 });
         });
-        
+
+        it('enter huge amount number after decimal in lat', (done) => {
+            let lat_with_huge_amount_number = 1.12345678901234;
+            request
+                .get(
+                    `coordinates/?&lon=${lon}&lat=` +
+                    `${lat_with_huge_amount_number}`
+                )
+                .end((err, res) => {
+                    if (err) return done(err);
+                    expect(res.statusCode).to.be.equal(400);
+                    expect(res.body.error.message)
+                        .to.equal(
+                            'Введите значение широты с точностью до 13 ' +
+                            'значений.'
+                        );
+                    done();
+                });
+        });
+
         it('enter greater_hour', (done) => {
             let greater_hour = 30;
             request

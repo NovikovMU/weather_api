@@ -1,6 +1,5 @@
 const logger = require('../logger/loggers');
 require('dotenv').config();
-// const fetch = require('node-fetch');
 
 /**
 * @param {string} lat
@@ -9,7 +8,7 @@ require('dotenv').config();
 */
 function fetchWeatherData(lat, lon) {
     const apiName = 'locationforecast'
-    const url =
+    const endpoint =
         'https://api.met.no/weatherapi/' +
         apiName +
         '/2.0/compact?lat=' +
@@ -17,8 +16,7 @@ function fetchWeatherData(lat, lon) {
         '&lon=' +
         lon +
         '&altitude=0';
-    console.error(url)
-    return fetch(url)
+    return fetch(endpoint)
         .then(response => {
             if (!response.ok) {
                 logger.error({
@@ -38,13 +36,13 @@ function fetchWeatherData(lat, lon) {
 /**
 * @param {string} lat
 * @param {string} lon
-* @returns {Promise<object>}
+* @returns {Promise<object> | Promise<null>}
 */
 
 function fetchCityData(lat, lon) {
     const BIG_DATA_API = process.env.BIG_DATA_API;
     const apiName = 'api-bdc.net';
-    const url =
+    const endpoint =
     'https://' +
     apiName +
     '/data/reverse-geocode-with-timezone?latitude=' +
@@ -53,7 +51,7 @@ function fetchCityData(lat, lon) {
     lon +
     '&localityLanguage=ru&key=' +
     BIG_DATA_API;
-    return fetch(url)
+    return fetch(endpoint)
         .then(response => {
             if (!response.ok) {
                 logger.error({
@@ -61,9 +59,12 @@ function fetchCityData(lat, lon) {
                     'text': response.statusText,
                     'site': apiName
                 })
-                return {}
+                return
             }
             return response.json();
+        })
+        .catch(error => {
+            return
         })
 }
 
@@ -78,14 +79,14 @@ function fetchLatLonData(country, city) {
     if (country) {
         country = 'country=' + country
     } else {country = ''}
-    const url =
+    const endpoint =
     'https://nominatim.' +
     apiName +
     '/search?' +
     country +
     '&city=' + city +
     '&format=json';
-    return fetch(url)
+    return fetch(endpoint)
         .then(response => {
             if (!response.ok) {
                 logger.error({
@@ -150,13 +151,28 @@ function maintainData(
         }
     }
 
+    let afterDecimalLon = lon.split('.')[1] || ''
+    if (afterDecimalLon.length > 13) {
+        throw {
+            message: 'Введите значение долготы с точностью до 13 значений.',
+            status: 400
+        }
+    }
+    
     if (/[a-zA-Z]/g.test(lat)) {
         throw {
             message: 'Значениче широты должно быть числом.',
             status: 400
         }
     }
-
+    let afterDecimalLat = lat.split('.')[1] || ''
+    if (afterDecimalLat.length > 13) {
+        throw {
+            message: 'Введите значение широты с точностью до 13 значений.',
+            status: 400
+        }
+    }
+    
     if (-90 > lat || lat > 90) {
         throw {
             message: 'Широта должна быть в диапазоне [-90:90].',
@@ -179,7 +195,7 @@ function maintainData(
         .then(([data1, data2]) => {
             let units = data1.properties.meta.units
             const timeseries_array = data1.properties.timeseries
-            if (Object.keys(data2).length !== 0) {
+            if (data2) {
                 is_utc_time = false
                 if (data2.city == '') {
                     if (!point_name) {
@@ -193,24 +209,31 @@ function maintainData(
                     if (!point_name) {
                         point_name = city
                     }
-                    offset = data2.timeZone.utcOffset
                 }
+                offset = data2.timeZone.utcOffset
             }
             let result_array = []
             for (let element of timeseries_array) {
-                let element_time = element.time.slice(0, -1)
-                let date_time = element_time.split('T')
-                let date = date_time[0]
-                let time_array = date_time[1].split(':')
-                if (offset) {
-                    time_array[0] = (
-                        24 + Number(time_array[0]) + Number(offset)
-                    ) % 24
+                let dateObject = new Date(element.time)
+                // Получение даты
+                let year = ('0' + (dateObject.getFullYear())).slice(-2);
+                let month = ('0' + (dateObject.getMonth())).slice(-2);
+                let day = ('0' + dateObject.getDate()).slice(-2);
+                // Получение времени
+                let hours = ('0' + dateObject.getHours()).slice(-2);
+                let minutes = ('0' + dateObject.getMinutes()).slice(-2);
+                let seconds = ('0' + dateObject.getSeconds()).slice(-2);
+                if (!is_utc_time) {
+                    hours = (
+                        '0' + (24 + Number(hours) + Number(offset)
+                    ) % 24).slice(-2)
                 }
-                if (demand_hour != Number(time_array[0])) {continue}
+                if (Number(demand_hour) != hours) {continue}
                 let result_dict = {
-                    'date': date,
-                    'time': time_array.join(':'),
+                    'date':
+                        year + "-" + month + "-" + day,
+                    'time': 
+                        hours + ":" + minutes + ":" + seconds,
                     'temerature':
                         element.data.instant.details.air_temperature +
                         ' ' +

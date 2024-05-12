@@ -98,7 +98,6 @@ const { fetchLatLonData, maintainData } = require('../../logic/weather')
  *                   type: string
  *                   example: "Resource not found"
 */
-
 router.get('/coordinates/', (req, res, next) => {
     const lat = req.query.lat;
     const lon = req.query.lon;
