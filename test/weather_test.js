@@ -5,7 +5,7 @@ const expect  = require('chai').expect;
 
 describe('GET weather by lot, lan', () => {
     let lat = 0;
-    let lon = 1;
+    let lon = 1.12345678901239;
     describe('succes enter querys', () => {
         let default_hour = '12:00:00';
         it('without demand hour', (done) => {
@@ -17,12 +17,12 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body).to.be.an('object');
                     expect(res.body.data).to.be.an('array');
                     expect(res.body.lat).to.equal(lat);
-                    expect(res.body.lon).to.equal(lon);
+                    expect(res.body.lon).to.equal(Number(lon.toFixed(14)));
                     expect(res.body.data[0].time).to.equal(default_hour);
                     done();
                 });
         });
-    
+
         it('with demand hour', (done) => {
             let demand_hour = 3;
             let hour_result = '03:00:00';
@@ -76,25 +76,6 @@ describe('GET weather by lot, lan', () => {
                 });
         });
 
-        it('enter huge amount number after decimal in lon', (done) => {
-            let lon_with_huge_amount_number = 1.12345678901234;
-            request
-                .get(
-                    `coordinates/?&lon=${lon_with_huge_amount_number}` +
-                    `&lat=${lat}`
-                )
-                .end((err, res) => {
-                    if (err) return done(err);
-                    expect(res.statusCode).to.be.equal(400);
-                    expect(res.body.error.message)
-                        .to.equal(
-                            'Введите значение долготы с точностью до 13 ' +
-                            'значений.'
-                        );
-                    done();
-                });
-        });
-
         it('dont enter lat', (done) => {
             request
                 .get(`coordinates/?&lon=${lon}`)
@@ -128,25 +109,6 @@ describe('GET weather by lot, lan', () => {
                     expect(res.statusCode).to.be.equal(400);
                     expect(res.body.error.message)
                         .to.equal('Широта должна быть в диапазоне [-90:90].');
-                    done();
-                });
-        });
-
-        it('enter huge amount number after decimal in lat', (done) => {
-            let lat_with_huge_amount_number = 1.12345678901234;
-            request
-                .get(
-                    `coordinates/?&lon=${lon}&lat=` +
-                    `${lat_with_huge_amount_number}`
-                )
-                .end((err, res) => {
-                    if (err) return done(err);
-                    expect(res.statusCode).to.be.equal(400);
-                    expect(res.body.error.message)
-                        .to.equal(
-                            'Введите значение широты с точностью до 13 ' +
-                            'значений.'
-                        );
                     done();
                 });
         });

@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "type": "chrome",
+            "name": "http://localhost:3000/api/v1/coordinates/?lat=35.8266318&lon=58.898054&demand_hour=22",
+            "request": "launch",
+            "url": "http://localhost:3000/api/v1/coordinates/?lat=35.8266318&lon=58.898054&demand_hour=22"
+        }
+    ]
+}

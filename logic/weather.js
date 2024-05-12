@@ -151,28 +151,13 @@ function maintainData(
         }
     }
 
-    let afterDecimalLon = lon.split('.')[1] || ''
-    if (afterDecimalLon.length > 13) {
-        throw {
-            message: 'Введите значение долготы с точностью до 13 значений.',
-            status: 400
-        }
-    }
-    
     if (/[a-zA-Z]/g.test(lat)) {
         throw {
             message: 'Значениче широты должно быть числом.',
             status: 400
         }
     }
-    let afterDecimalLat = lat.split('.')[1] || ''
-    if (afterDecimalLat.length > 13) {
-        throw {
-            message: 'Введите значение широты с точностью до 13 значений.',
-            status: 400
-        }
-    }
-    
+
     if (-90 > lat || lat > 90) {
         throw {
             message: 'Широта должна быть в диапазоне [-90:90].',
@@ -211,6 +196,9 @@ function maintainData(
                     }
                 }
                 offset = data2.timeZone.utcOffset
+                offset = offset.split(':')
+                offsetHour = offset[0]
+                offsetMinute = offset[1]
             }
             let result_array = []
             for (let element of timeseries_array) {
@@ -225,16 +213,23 @@ function maintainData(
                 let seconds = ('0' + dateObject.getSeconds()).slice(-2);
                 if (!is_utc_time) {
                     hours = (
-                        '0' + (24 + Number(hours) + Number(offset)
-                    ) % 24).slice(-2)
+                        '0' + (24 + Number(hours) + Number(offsetHour)) % 24
+                    ).slice(-2)
+                    if (offsetMinute) {
+                        minutes = (
+                            '0' + (
+                                60 + Number(minutes) + Number(offsetMinute)
+                            ) % 60
+                        ).slice(-2)
+                    }
                 }
-                if (Number(demand_hour) != hours) {continue}
+                if (Number(demand_hour) != Number(hours)) {continue}
                 let result_dict = {
                     'date':
                         year + "-" + month + "-" + day,
-                    'time': 
+                    'time':
                         hours + ":" + minutes + ":" + seconds,
-                    'temerature':
+                    'temperature':
                         element.data.instant.details.air_temperature +
                         ' ' +
                         units.air_temperature,
