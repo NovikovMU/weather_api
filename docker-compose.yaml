@@ -5,3 +5,14 @@ services:
     build: .
     ports:
       - "3000:3000"
+    networks:
+      - first_network
+  telegram_bot:
+    container_name: telegram
+    image: telegram_bot
+    depends_on:
+      - weather_api
+    networks:
+      - first_network
+networks:
+  first_network:
