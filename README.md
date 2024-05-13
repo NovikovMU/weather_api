@@ -40,10 +40,11 @@ BIG_DATA_API=<Ваш API ключ>
 ```text
 docker compose up -d
 ```
+- План обработки при обращении к action coordinates
+![](https://github.com/NovikovMU/weather_api/blob/main/weather_api/photo/coordinates.png)
 
-![План обработки при обращении к action coordinates](https://github.com/NovikovMU/weather_api/blob/main/weather_api/photo/coordinates.png)
-
-![План обработки при обращении к action locations](https://github.com/NovikovMU/weather_api/blob/main/weather_api/photo/locations.png)
+- План обработки при обращении к action locations
+![](https://github.com/NovikovMU/weather_api/blob/main/weather_api/photo/locations.png)
 
 ### Endpoints для action
 
