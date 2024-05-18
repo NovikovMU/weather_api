@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { fetchLatLonData, maintainData } = require('../../logic/weather')
+const logger = require('../../logger/loggers');
 /**
 * @swagger
 * tags:
@@ -108,9 +109,19 @@ router.get('/coordinates/', (req, res, next) => {
             res.status(200).json(data)
         })
         .catch(error => {
-            return res.status(error.status).json({
-                'error message': `${error.message}`,
-            })
+            if (error.status) {
+                return res.status(error.status).json({
+                    'error message': `${error.message}`,
+                })
+            } else {
+                logger.error({
+                    'text': error.message
+                })
+                return res.status(400).json({
+                    'error message': 'Проблемы на сервере.',
+                })
+
+            }
         })
 })
 
@@ -237,9 +248,19 @@ router.get('/locations/', (req, res, next) => {
                 })
         })
         .catch(error => {
-            return res.status(error.status).json({
-                'error message': `${error.message}`,
-            })
+            if (error.status) {
+                return res.status(error.status).json({
+                    'error message': `${error.message}`,
+                })
+            } else {
+                logger.error({
+                    'text': error.message,
+                })
+                return res.status(400).json({
+                    'error message': 'Проблемы на сервере.',
+                })
+
+            }
         })
 })
 

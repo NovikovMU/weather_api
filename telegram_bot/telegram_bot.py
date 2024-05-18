@@ -22,17 +22,15 @@ def maintenance_respone_json(result_json: dict) -> str:
         first_part = 'Время UTC.'
     if not city:
         point_name = result_json["point_name"]
-        second_part = f'Погода в {point_name} на время {data[0]["time"]}'
+        second_part = f'Погода в {point_name}'
     else:
         second_part = (
-            f'Погода в стране {country} городе {city} на время ' +
-            f'{data[0]["time"]}'
+            f'Погода в стране {country} городе {city}'
         )
     for element in data:
         response += (
             f'на дату {element["date"]} \n температура - ' +
-            f'{element["temperature"]}, \n скорость ветра -' +
-            f'{element["wind speed"]} \n'
+            f'{element["temperature"]}. \n'
         )
     response_text = (
         f'{first_part} {second_part} \n {response}'

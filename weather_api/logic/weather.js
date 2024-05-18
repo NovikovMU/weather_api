@@ -172,8 +172,9 @@ function maintainData(
         }
     }
 
-    let offset = null
     let is_utc_time = true
+    let offset
+    let offsetHour
     return Promise.all(
         [fetchWeatherData(lat, lon), fetchCityData(lat, lon)]
     )
@@ -197,63 +198,161 @@ function maintainData(
                 }
                 offset = data2.timeZone.utcOffset
                 offset = offset.split(':')
-                offsetHour = offset[0]
-                offsetMinute = offset[1]
+                offsetHour = Number(offset[0])
             }
             let result_array = []
+            /*
+            Словарь, в котором мы заносим значения ниже требуемого час и если
+            в этот день не вставляли дату, то записывает среднее значение
+            между нижним и верхним значениями часов
+            */
+            let isInsertInArray = false
+            let lowerTemperature
+            let upperTemperature
+            // Делаем поправку на timezone, если есть.
+            let reset_hour = 0
+            if (!is_utc_time) {
+                reset_hour = (24 + reset_hour + Number(offsetHour)) % 24
+            }
+            /*
+            Получаем дату для обработки 23 часа, когда нет совпадений, т.к
+            при переходе на новый день дата будет другой.
+            */
+            let data_for_23_hour = timeseries_array[0]
+                .time.slice(0, -1)
+                .split('T')[0]
             for (let element of timeseries_array) {
                 let dateObject = new Date(element.time)
-                // Получение даты
-                let year = ('0' + (dateObject.getFullYear())).slice(-2);
-                let month = ('0' + (dateObject.getMonth())).slice(-2);
-                let day = ('0' + dateObject.getDate()).slice(-2);
-                // Получение времени
-                let hours = ('0' + dateObject.getHours()).slice(-2);
-                let minutes = ('0' + dateObject.getMinutes()).slice(-2);
-                let seconds = ('0' + dateObject.getSeconds()).slice(-2);
                 if (!is_utc_time) {
-                    hours = (
-                        '0' + (24 + Number(hours) + Number(offsetHour)) % 24
-                    ).slice(-2)
-                    if (offsetMinute) {
-                        minutes = (
-                            '0' + (
-                                60 + Number(minutes) + Number(offsetMinute)
-                            ) % 60
-                        ).slice(-2)
-                    }
+                    dateObject = new Date(
+                        dateObject.getTime() + offsetHour * 60 * 60 * 1000
+                    )
                 }
-                if (Number(demand_hour) != Number(hours)) {continue}
-                let result_dict = {
-                    'date':
-                        year + "-" + month + "-" + day,
-                    'time':
-                        hours + ":" + minutes + ":" + seconds,
-                    'temperature':
-                        element.data.instant.details.air_temperature +
+                let year = dateObject.getUTCFullYear();
+                let day = String(dateObject.getUTCDate()).padStart(2, '0');
+                let month = String(dateObject.getUTCMonth() + 1).padStart(2, '0');
+                let date_array = `${year}-${month}-${day}`
+                let hour = dateObject.getUTCHours()
+                /*
+                Обрабатываем ситуацию, когда нижнее значение есть, но
+                верхнее значение не получили. Также обновляем значения.
+                */
+                if (date_array > data_for_23_hour) {
+                    if (demand_hour < hour && !lowerTemperature) {
+                        lowerTemperature = upperTemperature
+                        upperTemperature =
+                            element
+                                .data
+                                .instant
+                                .details
+                                .air_temperature
+                        let temperature = (
+                            upperTemperature + lowerTemperature
+                        ) / 2
+                        temperature = Number(temperature).toFixed(1)
+                        let result_dict = {
+                            'date':
+                            date_array,
+                            'temperature':
+                            temperature +
+                            ' ' +
+                            units.air_temperature,
+                        }
+                        result_array.push(result_dict)
+                        isInsertInArray = true
+                        continue
+                    }
+                    if (demand_hour > hour && !upperTemperature && !isInsertInArray) {
+                        upperTemperature =
+                            element
+                                .data
+                                .instant
+                                .details
+                                .air_temperature
+                        let temperature = (
+                            upperTemperature + lowerTemperature
+                        ) / 2
+                        temperature = Number(temperature).toFixed(1)
+                        let result_dict = {
+                            'date':
+                            'asdadsas',
+                            'date':
+                            data_for_23_hour,
+                            'temperature':
+                            temperature +
+                            ' ' +
+                            units.air_temperature,
+                        }
+                        result_array.push(result_dict)
+                    }
+                    isInsertInArray = false
+                    upperTemperature = null
+                    lowerTemperature = null
+                    data_for_23_hour = date_array
+                }
+                if (demand_hour > hour) {
+                    if (isInsertInArray) continue
+                    lowerTemperature =
+                        element
+                            .data
+                            .instant
+                            .details
+                            .air_temperature
+                }
+                else if (demand_hour == hour) {
+                    let temperature =
+                        element
+                            .data
+                            .instant
+                            .details
+                            .air_temperature
+                    let result_dict = {
+                        'date':
+                        date_array,
+                        'temperature':
+                        temperature +
                         ' ' +
                         units.air_temperature,
-                    'wind speed':
-                        element.data.instant.details.wind_speed +
+                    }
+                    result_array.push(result_dict)
+                    isInsertInArray = true
+                } else if (demand_hour < hour) {
+                    if (isInsertInArray) continue
+                    upperTemperature =
+                        element
+                            .data
+                            .instant
+                            .details
+                            .air_temperature
+
+
+                }
+                /*
+                Обрабатываем ситуацию, когда совпадений нет, но есть нижнее и
+                верхние значения.
+                */
+                if (
+                    !isInsertInArray &&
+                    lowerTemperature &&
+                    upperTemperature
+                ) {
+                    let temperature = (
+                        upperTemperature + lowerTemperature
+                    ) / 2
+                    temperature = Number(temperature).toFixed(1)
+                    let result_dict = {
+                        'date':
+                        date_array,
+                        'temperature':
+                        temperature +
                         ' ' +
-                        units.wind_speed,
+                        units.air_temperature,
+                        'l' : lowerTemperature,
+                        'u': upperTemperature
+                    }
+                    result_array.push(result_dict)
+                    isInsertInArray = true
                 }
-                if (element.data.next_1_hours) {
-                    result_dict[
-                        'next hour'
-                    ] = element.data.next_1_hours.summary.symbol_code;
-                }
-                if (element.data.next_6_hours) {
-                    result_dict[
-                        'next 6 hours'
-                    ] = element.data.next_6_hours.summary.symbol_code;
-                }
-                if (element.data.next_12_hours) {
-                    result_dict[
-                        'next 12 hours'
-                    ] = element.data.next_12_hours.summary.symbol_code;
-                }
-                result_array.push(result_dict)
             }
             let result = {};
             result['city'] = city;
