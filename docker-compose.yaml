@@ -7,6 +7,7 @@ services:
       - "3000:3000"
     networks:
       - first_network
+    restart: always
   telegram_bot:
     container_name: telegram
     build: ./telegram_bot/
@@ -14,5 +15,6 @@ services:
       - weather_api
     networks:
       - first_network
+    restart: always
 networks:
   first_network:

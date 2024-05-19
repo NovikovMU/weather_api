@@ -41,7 +41,7 @@ def maintenance_respone_json(result_json: dict) -> str:
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     text = (
-        'Привет этот бот умеет показывать погоду по координатам (введите '
+        'Привет, этот бот умеет показывать погоду по координатам (введите '
         'команду "/coordinates") и по названию городов (введите команду '
         '"/locations")'
     )
@@ -51,11 +51,11 @@ def start(message: types.Message):
 @bot.message_handler(commands=['coordinates'])
 def coordinates(message: types.Message):
     text = (
-        'Введите через пробел ширину (lat) и долготу (lon) числом. \n'
+        'Введите через запятую ширину (lat) и долготу (lon) числом. \n'
         'Если хотите получить погоду в определённое время, введите во '
         'сколько часов вы хотите получить прогноз погоды (целым числом, если '
         'число не ввели прогноз погоды будет показывать на 12 часов дня). \n'
-        'Пример: 60 50 19 \n'
+        'Пример: 60, 50, 19 \n'
         'Покажет погоду в точке с координатами lat=60, lon=50 19 часов.'
     )
     bot.send_message(message.chat.id, text)
@@ -63,7 +63,7 @@ def coordinates(message: types.Message):
 
 
 def get_weather_by_coordinates(message: types.Message):
-    text = message.text.split()
+    text = message.text.split(',')
     # check if user call base function
     next_function = command_function.get(text[0])
     if next_function:
@@ -77,7 +77,7 @@ def get_weather_by_coordinates(message: types.Message):
         bot.register_next_step_handler(message, get_weather_by_coordinates)
         return
     if len(text) == 3:
-        demand_hour = text[2]
+        demand_hour = text[2].strip()
         try:
             num = int(demand_hour)
             if num != float(demand_hour):
@@ -131,6 +131,7 @@ def get_weather_by_coordinates(message: types.Message):
         f'http://weather_api:3000/api/v1/coordinates/?lat={lat}&lon={lon}' +
         f'&demand_hour={demand_hour}'
     )
+
     response = requests.get(url)
     if response.status_code != 200:
         bot.send_message(message.chat.id, response.text)
@@ -143,21 +144,31 @@ def get_weather_by_coordinates(message: types.Message):
 @bot.message_handler(commands=['locations'])
 def locations(message: types.Message):
     text = (
-        'Введите через пробел город (city) и страну (country, '
+        'Введите через запятую город (city) и страну (country, '
         'необязательно) Программа может выдать больше одного города без '
         'конкретной страны. \n'
         'Если хотите получить погоду в определённое время, введите во '
         'сколько часов вы хотите получить прогноз погоды (целым числом, если '
         'число не ввели прогноз погоды будет показывать на 12 часов дня). \n'
-        'Пример: Москва Россия \n'
+        'Пример: Нижний Новгород, Россия \n'
         'Покажет погоду в городе Москве в стране, Россия в 12 часов.'
     )
     bot.send_message(message.chat.id, text)
     bot.register_next_step_handler(message, get_weather_by_location)
 
 
+@bot.message_handler(func=lambda message: True)
+def handle_unknown_command(message):
+    if message.text.startswith('/'):
+        command = command_function.get(message)
+        if not command:
+            bot.send_message(message.chat.id, "Такой команды нет.")
+    else:
+        bot.send_message(message.chat.id, "Я не понимаю этот запрос.")
+
+
 def get_weather_by_location(message: types.Message):
-    text = message.text.split()
+    text = message.text.split(',')
     # check if user call base function
     next_function = command_function.get(text[0])
     if next_function:
@@ -171,7 +182,7 @@ def get_weather_by_location(message: types.Message):
         bot.register_next_step_handler(message, get_weather_by_location)
         return
     if len(text) == 3:
-        demand_hour = text[2]
+        demand_hour = text[2].strip()
         try:
             num = int(demand_hour)
             if num != float(demand_hour):
@@ -200,15 +211,16 @@ def get_weather_by_location(message: types.Message):
             return
     else:
         demand_hour = ''
-    city = text[0]
+    city = text[0].strip()
     try:
-        country = text[1]
+        country = text[1].strip()
     except IndexError:
         country = ''
     url = (
         f'http://weather_api:3000/api/v1/locations/?&city={city}&' +
         f'country={country}&demand_hour={demand_hour}'
     )
+
     response = requests.get(url)
     if response.status_code != 200:
         bot.send_message(message.chat.id, response.text)

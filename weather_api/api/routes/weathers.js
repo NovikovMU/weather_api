@@ -222,15 +222,16 @@ router.get('/locations/', (req, res, next) => {
         .then(data => {
             let promisesArray = []
             for (let element of data) {
-                if (element.class != 'place') { continue }
-                let lat = element.lat
-                let lon = element.lon
-                let city_name = element.name
-                let display_name = element.display_name
-                let country = element.display_name.split(' ').pop()
-                promisesArray.push(maintainData(
-                    lat, lon, demand_hour, country, city_name, display_name
-                ))
+                if (element.class == 'place' || element.class == 'boundary') {
+                    let lat = element.lat
+                    let lon = element.lon
+                    let city_name = element.name
+                    let display_name = element.display_name
+                    let country = element.display_name.split(' ').pop()
+                    promisesArray.push(maintainData(
+                        lat, lon, demand_hour, country, city_name, display_name
+                    ))
+                }
             }
             if (promisesArray.length === 0) {
                 return res.status(404).json({
@@ -238,13 +239,18 @@ router.get('/locations/', (req, res, next) => {
                 })
             }
             Promise.all(promisesArray)
-                .then(resultArray => {
-                    return res.status(200).json(resultArray)
-                })
-                .catch(error => {
-                    return res.status(error.status).json({
-                        'error message': `${error.message}`,
-                    })
+                .then(response => {
+                    if (!response) {
+                        logger.error({
+                            'status': response.status,
+                            'text': response.statusText,
+                        })
+                        throw {
+                            message: response.statusText,
+                            status: response.status
+                        }
+                    }
+                    return res.status(200).json(response)
                 })
         })
         .catch(error => {

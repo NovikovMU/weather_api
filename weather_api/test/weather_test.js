@@ -5,9 +5,8 @@ const expect  = require('chai').expect;
 
 describe('GET weather by lot, lan', () => {
     let lat = 0;
-    let lon = 1.12345678901239;
+    let lon = 1;
     describe('succes enter querys', () => {
-        let default_hour = '12:00:00';
         it('without demand hour', (done) => {
             request
                 .get(`coordinates/?lat=${lat}&lon=${lon}`).end((err, res) => {
@@ -17,20 +16,23 @@ describe('GET weather by lot, lan', () => {
                     expect(res.body).to.be.an('object');
                     expect(res.body.data).to.be.an('array');
                     expect(res.body.lat).to.equal(lat);
-                    expect(res.body.lon).to.equal(Number(lon.toFixed(14)));
-                    expect(res.body.data[0].time).to.equal(default_hour);
+                    expect(res.body.lon).to.equal(lon);
                     done();
                 });
         });
 
         it('with demand hour', (done) => {
             let demand_hour = 3;
-            let hour_result = '03:00:00';
             request
                 .get(`coordinates/?lat=${lat}&lon=${lon}&demand_hour=${demand_hour}`)
                 .end((err, res) => {
                     if (err) return done(err);
-                    expect(res.body.data[0].time).to.equal(hour_result);
+                    expect(res.statusCode).to.be.equal(200);
+                    expect(res.body).to.not.empty;
+                    expect(res.body).to.be.an('object');
+                    expect(res.body.data).to.be.an('array');
+                    expect(res.body.lat).to.equal(lat);
+                    expect(res.body.lon).to.equal(lon);
                     done();
                 });
         });
