@@ -234,6 +234,7 @@ def get_weather_by_location(message: types.Message):
 command_function = {
     '/coordinates': coordinates,
     '/locations': locations,
+    '/start': start,
 }
 
 bot.polling(non_stop=True)
